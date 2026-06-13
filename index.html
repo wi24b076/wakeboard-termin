@@ -153,6 +153,115 @@
   }
   .vote-legend span { display: flex; align-items: center; gap: 5px; }
 
+
+
+  /* CALENDAR RANGE SELECTION */
+  .calendar-months {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+  .month-card {
+    background: #fff;
+    border: 1.5px solid #dde8ef;
+    border-radius: var(--radius);
+    padding: 1rem;
+  }
+  .month-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: 0.75rem;
+    color: var(--ink);
+  }
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  .calendar-head {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ink-faint);
+    text-align: center;
+    padding-bottom: 4px;
+  }
+  .calendar-day {
+    aspect-ratio: 1 / 1;
+    border: 1.5px solid #dde8ef;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: transform 0.1s, border-color 0.15s, background 0.15s;
+  }
+  .calendar-day:hover { border-color: var(--wave); transform: translateY(-1px); }
+  .calendar-day.empty { visibility: hidden; pointer-events: none; }
+  .calendar-day.past {
+    background: #f2f4f6;
+    color: #b9c6cf;
+    cursor: not-allowed;
+    border-color: #e6edf2;
+  }
+  .calendar-day.pending {
+    background: var(--maybe-bg);
+    border-color: var(--maybe);
+    color: #7a5200;
+  }
+  .calendar-day.in-range {
+    background: var(--yes-bg);
+    border-color: var(--yes);
+    color: #0d5c35;
+  }
+  .calendar-day.today::after {
+    content: 'heute';
+    position: absolute;
+    bottom: 2px;
+    font-family: 'Inter', sans-serif;
+    font-size: 8px;
+    font-weight: 600;
+    color: var(--water);
+  }
+  .range-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 1rem;
+  }
+  .range-chip {
+    background: var(--yes-bg);
+    color: #0d5c35;
+    border: 1.5px solid var(--yes);
+    border-radius: 99px;
+    padding: 0.45rem 0.75rem;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .range-chip button {
+    border: none;
+    background: transparent;
+    color: #0d5c35;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .small-action {
+    margin-top: 0.75rem;
+    border: none;
+    background: transparent;
+    color: var(--water);
+    cursor: pointer;
+    font-weight: 600;
+  }
+
   /* SUBMIT */
   .submit-btn {
     background: var(--water);
@@ -241,18 +350,19 @@
 
   <div class="divider"></div>
 
-  <!-- DATES -->
+  <!-- DATE RANGES -->
   <div class="dates-section">
     <div class="section-label">Verfügbarkeit</div>
-    <h2>Welche Tage passen dir?</h2>
+    <h2>Wähle deine freien Zeiträume</h2>
     <div class="vote-legend">
-      <span>✅ Bin dabei</span>
-      <span>🤔 Vielleicht</span>
-      <span>❌ Klappt nicht</span>
-      <span style="color:#c0cdd8">◻ Noch nicht gewählt</span>
+      <span>✅ Grün = ausgewählter Zeitraum</span>
+      <span>🟧 Orange = Startdatum gewählt</span>
+      <span style="color:#c0cdd8">Grau = vergangene Tage</span>
     </div>
-    <div class="dates-grid" id="datesGrid"></div>
-    <p class="hint" style="margin-top:0.75rem">Einmal klicken = ✅ Dabei &nbsp;·&nbsp; Zweimal = 🤔 Vielleicht &nbsp;·&nbsp; Dreimal = ❌ Nicht da &nbsp;·&nbsp; Viermal = zurücksetzen</p>
+    <div class="dates-grid calendar-months" id="datesGrid"></div>
+    <div class="range-list" id="rangeList"></div>
+    <button class="small-action" onclick="clearRanges()">Auswahl zurücksetzen</button>
+    <p class="hint" style="margin-top:0.75rem">Klick zuerst auf den Starttag und dann auf den Endtag. Du kannst mehrere freie Zeiträume hinzufügen.</p>
   </div>
 
   <button class="submit-btn" onclick="submitVote()">Abstimmung speichern 💾</button>
@@ -262,7 +372,7 @@
   <!-- RESULTS -->
   <div class="results-section">
     <div class="section-label">Übersicht</div>
-    <h2>Wer kann wann?</h2>
+    <h2>Welche Tage passen am besten?</h2>
     <div class="results-grid" id="resultsGrid"></div>
   </div>
 
@@ -294,104 +404,213 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const votesCollection = collection(db, "wakeVotes");
+const rangesCollection = collection(db, "wakeRanges");
 
-const DATES = [
-  // Juni 2026
-  { date: '2026-06-13', label: 'Sa, 13. Jun' },
-  { date: '2026-06-14', label: 'So, 14. Jun' },
-  { date: '2026-06-20', label: 'Sa, 20. Jun' },
-  { date: '2026-06-21', label: 'So, 21. Jun' },
-  { date: '2026-06-27', label: 'Sa, 27. Jun' },
-  { date: '2026-06-28', label: 'So, 28. Jun' },
-  // Juli 2026
-  { date: '2026-07-04', label: 'Sa, 4. Jul' },
-  { date: '2026-07-05', label: 'So, 5. Jul' },
-  { date: '2026-07-11', label: 'Sa, 11. Jul' },
-  { date: '2026-07-12', label: 'So, 12. Jul' },
-  { date: '2026-07-18', label: 'Sa, 18. Jul' },
-  { date: '2026-07-19', label: 'So, 19. Jul' },
-  { date: '2026-07-25', label: 'Sa, 25. Jul' },
-  { date: '2026-07-26', label: 'So, 26. Jul' },
-];
-
-const WEEKDAYS = ['So','Mo','Di','Mi','Do','Fr','Sa'];
 const MONTHS = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
-const CYCLE = [null, 'yes', 'maybe', 'no'];
+const WEEKDAYS_SHORT = ['Mo','Di','Mi','Do','Fr','Sa','So'];
 
-let selections = {}; // dateKey -> 'yes'|'maybe'|'no'|null
-let allUserVotes = {}; // userId -> { name, selections }
-let votes = {}; // dateKey -> { name: 'yes'|'maybe'|'no' }
+const today = startOfDay(new Date());
+const year = today.getFullYear();
+const juneStart = new Date(year, 5, 1);
+const julyEnd = new Date(year, 6, 31);
+const visibleStart = today > juneStart ? today : juneStart;
+const visibleEnd = julyEnd;
 
-function parseDate(s) {
-  const [y, m, d] = s.split('-').map(Number);
+let selectedRanges = []; // [{ start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' }]
+let pendingStart = null;
+let allUserRanges = {}; // userId -> { name, ranges }
+let availability = {}; // dateKey -> [names]
+
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function formatDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function parseDateKey(key) {
+  const [y, m, d] = key.split('-').map(Number);
   return new Date(y, m - 1, d);
+}
+
+function formatDateHuman(key) {
+  const d = parseDateKey(key);
+  return `${d.getDate()}. ${MONTHS[d.getMonth()]}`;
 }
 
 function userIdFromName(name) {
   return encodeURIComponent(name.trim().toLowerCase());
 }
 
+function isPast(key) {
+  return parseDateKey(key) < today;
+}
+
+function isVisible(key) {
+  const d = parseDateKey(key);
+  return d >= visibleStart && d <= visibleEnd;
+}
+
+function mondayIndex(date) {
+  return (date.getDay() + 6) % 7;
+}
+
+function dateIsInAnySelectedRange(key) {
+  return selectedRanges.some(r => key >= r.start && key <= r.end);
+}
+
+function mergeRanges(ranges) {
+  if (!ranges.length) return [];
+  const sorted = [...ranges].sort((a, b) => a.start.localeCompare(b.start));
+  const merged = [sorted[0]];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const last = merged[merged.length - 1];
+    const current = sorted[i];
+    const lastEndPlusOne = new Date(parseDateKey(last.end));
+    lastEndPlusOne.setDate(lastEndPlusOne.getDate() + 1);
+
+    if (current.start <= formatDateKey(lastEndPlusOne)) {
+      if (current.end > last.end) last.end = current.end;
+    } else {
+      merged.push(current);
+    }
+  }
+
+  return merged;
+}
+
 function buildGrid() {
   const grid = document.getElementById('datesGrid');
   grid.innerHTML = '';
-  DATES.forEach(({ date }) => {
-    const d = parseDate(date);
-    const card = document.createElement('div');
-    card.className = 'date-card';
-    card.dataset.date = date;
-    card.innerHTML = `
-      <div class="weekday">${WEEKDAYS[d.getDay()]}</div>
-      <div class="day">${d.getDate()}</div>
-      <div class="month">${MONTHS[d.getMonth()]}</div>
-      <div class="status-icon"></div>
-    `;
-    card.onclick = () => cycleVote(date, card);
-    grid.appendChild(card);
+
+  if (visibleStart > visibleEnd) {
+    grid.innerHTML = '<p style="color:var(--ink-faint);font-size:14px">Juni und Juli sind für dieses Jahr schon vorbei.</p>';
+    return;
+  }
+
+  [5, 6].forEach(monthIndex => {
+    const monthCard = document.createElement('div');
+    monthCard.className = 'month-card';
+    monthCard.innerHTML = `<div class="month-title">${MONTHS[monthIndex]} ${year}</div>`;
+
+    const cal = document.createElement('div');
+    cal.className = 'calendar-grid';
+
+    WEEKDAYS_SHORT.forEach(day => {
+      const head = document.createElement('div');
+      head.className = 'calendar-head';
+      head.textContent = day;
+      cal.appendChild(head);
+    });
+
+    const first = new Date(year, monthIndex, 1);
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+    const emptyBefore = mondayIndex(first);
+
+    for (let i = 0; i < emptyBefore; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'calendar-day empty';
+      cal.appendChild(empty);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, monthIndex, day);
+      const key = formatDateKey(date);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'calendar-day';
+      btn.textContent = day;
+      btn.dataset.date = key;
+
+      if (!isVisible(key) || isPast(key)) {
+        btn.classList.add('past');
+        btn.disabled = true;
+      } else {
+        btn.onclick = () => selectDateForRange(key);
+      }
+
+      if (key === formatDateKey(today)) btn.classList.add('today');
+      if (pendingStart === key) btn.classList.add('pending');
+      if (dateIsInAnySelectedRange(key)) btn.classList.add('in-range');
+
+      cal.appendChild(btn);
+    }
+
+    monthCard.appendChild(cal);
+    grid.appendChild(monthCard);
   });
 }
 
-function cycleVote(date, card) {
-  const cur = selections[date] || null;
-  const idx = CYCLE.indexOf(cur);
-  const next = CYCLE[(idx + 1) % CYCLE.length];
-  if (next) selections[date] = next;
-  else delete selections[date];
-  applyCardState(card, next);
+function selectDateForRange(key) {
+  if (!pendingStart) {
+    pendingStart = key;
+  } else {
+    const start = pendingStart <= key ? pendingStart : key;
+    const end = pendingStart <= key ? key : pendingStart;
+    selectedRanges = mergeRanges([...selectedRanges, { start, end }]);
+    pendingStart = null;
+  }
+
+  buildGrid();
+  renderRangeList();
 }
 
-function applyCardState(card, state) {
-  card.className = 'date-card' + (state ? ' ' + state : '');
-  const icon = card.querySelector('.status-icon');
-  const icons = { yes: '✅', maybe: '🤔', no: '❌', null: '' };
-  icon.textContent = icons[state] || '';
-}
+function renderRangeList() {
+  const list = document.getElementById('rangeList');
+  list.innerHTML = '';
 
-function applySelectionsToCards() {
-  document.querySelectorAll('.date-card').forEach(card => {
-    const date = card.dataset.date;
-    applyCardState(card, selections[date] || null);
+  if (selectedRanges.length === 0) {
+    list.innerHTML = '<p style="color:var(--ink-faint);font-size:13px">Noch kein Zeitraum ausgewählt.</p>';
+    return;
+  }
+
+  selectedRanges.forEach((range, index) => {
+    const chip = document.createElement('div');
+    chip.className = 'range-chip';
+    chip.innerHTML = `${formatDateHuman(range.start)} – ${formatDateHuman(range.end)} <button title="Entfernen">×</button>`;
+    chip.querySelector('button').onclick = () => removeRange(index);
+    list.appendChild(chip);
   });
+}
+
+function removeRange(index) {
+  selectedRanges.splice(index, 1);
+  buildGrid();
+  renderRangeList();
+}
+
+function clearRanges() {
+  selectedRanges = [];
+  pendingStart = null;
+  buildGrid();
+  renderRangeList();
 }
 
 function loadExistingVoteForName() {
   const name = document.getElementById('nameInput').value.trim();
   if (!name) return;
   const userId = userIdFromName(name);
-  selections = { ...(allUserVotes[userId]?.selections || {}) };
-  applySelectionsToCards();
+  selectedRanges = [...(allUserRanges[userId]?.ranges || [])];
+  pendingStart = null;
+  buildGrid();
+  renderRangeList();
 }
 
 async function submitVote() {
   const name = document.getElementById('nameInput').value.trim();
   if (!name) { showToast('Bitte gib zuerst deinen Namen ein!'); return; }
-  if (Object.keys(selections).length === 0) { showToast('Wähle mindestens einen Tag aus!'); return; }
+  if (selectedRanges.length === 0) { showToast('Wähle mindestens einen Zeitraum aus!'); return; }
 
   try {
     const userId = userIdFromName(name);
-    await setDoc(doc(db, "wakeVotes", userId), {
+    await setDoc(doc(db, "wakeRanges", userId), {
       name,
-      selections,
+      ranges: selectedRanges,
       updatedAt: serverTimestamp()
     });
     showToast('✅ Gespeichert! Danke ' + name + '!');
@@ -401,33 +620,42 @@ async function submitVote() {
   }
 }
 
-function rebuildVotesFromUsers() {
-  votes = {};
+function rebuildAvailability() {
+  availability = {};
 
-  Object.values(allUserVotes).forEach(userVote => {
+  Object.values(allUserRanges).forEach(userVote => {
     const name = userVote.name;
-    const userSelections = userVote.selections || {};
+    const ranges = userVote.ranges || [];
 
-    Object.entries(userSelections).forEach(([date, val]) => {
-      if (!votes[date]) votes[date] = {};
-      votes[date][name] = val;
+    ranges.forEach(range => {
+      let d = parseDateKey(range.start);
+      const end = parseDateKey(range.end);
+
+      while (d <= end) {
+        const key = formatDateKey(d);
+        if (isVisible(key)) {
+          if (!availability[key]) availability[key] = [];
+          if (!availability[key].includes(name)) availability[key].push(name);
+        }
+        d.setDate(d.getDate() + 1);
+      }
     });
   });
 }
 
 function listenForVotes() {
-  onSnapshot(votesCollection, snapshot => {
-    allUserVotes = {};
+  onSnapshot(rangesCollection, snapshot => {
+    allUserRanges = {};
 
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
-      allUserVotes[docSnap.id] = {
+      allUserRanges[docSnap.id] = {
         name: data.name || docSnap.id,
-        selections: data.selections || {}
+        ranges: data.ranges || []
       };
     });
 
-    rebuildVotesFromUsers();
+    rebuildAvailability();
     renderResults();
   }, error => {
     console.error(error);
@@ -439,29 +667,31 @@ function renderResults() {
   const grid = document.getElementById('resultsGrid');
   grid.innerHTML = '';
 
-  const scored = DATES.map(({ date, label }) => {
-    const dayVotes = votes[date] || {};
-    const yesNames = Object.entries(dayVotes).filter(([,v]) => v === 'yes').map(([n]) => n);
-    const maybeNames = Object.entries(dayVotes).filter(([,v]) => v === 'maybe').map(([n]) => n);
-    const noNames = Object.entries(dayVotes).filter(([,v]) => v === 'no').map(([n]) => n);
-    const total = Object.keys(dayVotes).length;
-    return { date, label, yesNames, maybeNames, noNames, total };
-  }).filter(d => d.total > 0);
+  const scored = [];
+  let d = new Date(visibleStart);
+  while (d <= visibleEnd) {
+    const key = formatDateKey(d);
+    const names = availability[key] || [];
+    if (names.length > 0) {
+      scored.push({ key, names });
+    }
+    d.setDate(d.getDate() + 1);
+  }
 
   if (scored.length === 0) {
-    grid.innerHTML = '<p style="color:var(--ink-faint);font-size:14px">Noch keine Stimmen – seid ihr die Ersten! 🏄‍♂️</p>';
+    grid.innerHTML = '<p style="color:var(--ink-faint);font-size:14px">Noch keine Zeiträume gespeichert – seid ihr die Ersten! 🏄‍♂️</p>';
     return;
   }
 
-  const maxScore = Math.max(...scored.map(d => d.yesNames.length * 2 + d.maybeNames.length));
+  const maxCount = Math.max(...scored.map(d => d.names.length));
 
   scored
-    .sort((a, b) => (b.yesNames.length * 2 + b.maybeNames.length) - (a.yesNames.length * 2 + a.maybeNames.length))
-    .forEach(({ label, yesNames, maybeNames, noNames, total }) => {
-      const score = yesNames.length * 2 + maybeNames.length;
-      const isBest = score === maxScore && score > 0;
-      const yPct = total ? Math.round(yesNames.length / total * 100) : 0;
-      const mPct = total ? Math.round(maybeNames.length / total * 100) : 0;
+    .sort((a, b) => b.names.length - a.names.length || a.key.localeCompare(b.key))
+    .forEach(({ key, names }) => {
+      const d = parseDateKey(key);
+      const label = `${WEEKDAYS_SHORT[mondayIndex(d)]}, ${formatDateHuman(key)}`;
+      const isBest = names.length === maxCount;
+      const pct = Math.round((names.length / maxCount) * 100);
 
       const row = document.createElement('div');
       row.className = 'result-row';
@@ -469,19 +699,11 @@ function renderResults() {
         <div class="result-date">${label}${isBest ? '<br><span class="best-badge">Top-Termin 🌊</span>' : ''}</div>
         <div class="result-bars">
           <div class="bar-row bar-yes">
-            <span style="min-width:18px">✅ ${yesNames.length}</span>
-            <div class="bar-track"><div class="bar-fill" style="width:${yPct}%"></div></div>
-          </div>
-          <div class="bar-row bar-maybe">
-            <span style="min-width:18px">🤔 ${maybeNames.length}</span>
-            <div class="bar-track"><div class="bar-fill" style="width:${mPct}%"></div></div>
+            <span style="min-width:70px">✅ ${names.length} können</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
           </div>
         </div>
-        <div class="result-names">
-          ${yesNames.length ? '<b style="color:var(--yes)">Dabei:</b> ' + yesNames.join(', ') + '<br>' : ''}
-          ${maybeNames.length ? '<b style="color:var(--maybe)">Vielleicht:</b> ' + maybeNames.join(', ') + '<br>' : ''}
-          ${noNames.length ? '<b style="color:var(--no)">Nicht da:</b> ' + noNames.join(', ') : ''}
-        </div>
+        <div class="result-names"><b style="color:var(--yes)">Dabei:</b> ${names.join(', ')}</div>
       `;
       grid.appendChild(row);
     });
@@ -495,10 +717,12 @@ function showToast(msg) {
 }
 
 window.submitVote = submitVote;
+window.clearRanges = clearRanges;
 document.getElementById('nameInput').addEventListener('change', loadExistingVoteForName);
 document.getElementById('nameInput').addEventListener('blur', loadExistingVoteForName);
 
 buildGrid();
+renderRangeList();
 renderResults();
 listenForVotes();
 </script>

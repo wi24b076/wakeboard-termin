@@ -340,11 +340,18 @@
 
 <div class="container">
 
-  <!-- NAME -->
+  <!-- ACCESS + NAME -->
   <div class="name-section">
+    <div class="section-label">Zugang</div>
+    <h2>Gruppencode</h2>
+    <input type="password" id="codeInput" placeholder="z. B. wake-r3V9xJ7" maxlength="60" />
+    <p class="hint">Nur wer den Code kennt, kann die Abstimmung laden und speichern.</p>
+
+    <div style="height:1.25rem"></div>
+
     <div class="section-label">Dein Name</div>
     <h2>Wer bist du?</h2>
-    <input type="text" id="nameInput" placeholder="z. B. Linde" maxlength="30" />
+    <input type="text" id="nameInput" placeholder="z. B. Mia" maxlength="30" />
     <p class="hint">Gib deinen Namen ein, bevor du abstimmst.</p>
   </div>
 
@@ -404,7 +411,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const rangesCollection = collection(db, "wakeRanges");
 
 const MONTHS = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 const WEEKDAYS_SHORT = ['Mo','Di','Mi','Do','Fr','Sa','So'];
@@ -420,6 +426,8 @@ let selectedRanges = []; // [{ start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' }]
 let pendingStart = null;
 let allUserRanges = {}; // userId -> { name, ranges }
 let availability = {}; // dateKey -> [names]
+let activeEventCode = null;
+let unsubscribeVotes = null;
 
 function startOfDay(date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -444,6 +452,10 @@ function formatDateHuman(key) {
 
 function userIdFromName(name) {
   return encodeURIComponent(name.trim().toLowerCase());
+}
+
+function cleanEventCode(code) {
+  return code.trim().replaceAll('/', '-');
 }
 
 function isPast(key) {
@@ -591,9 +603,31 @@ function clearRanges() {
   renderRangeList();
 }
 
+function activateEventCode(showMessage = true) {
+  const code = cleanEventCode(document.getElementById('codeInput').value);
+  if (!code) {
+    if (showMessage) showToast('Bitte Gruppencode eingeben.');
+    return false;
+  }
+
+  if (activeEventCode === code) return true;
+
+  activeEventCode = code;
+  allUserRanges = {};
+  availability = {};
+
+  if (unsubscribeVotes) unsubscribeVotes();
+  listenForVotes();
+  renderResults();
+  loadExistingVoteForName();
+
+  if (showMessage) showToast('✅ Gruppencode aktiv.');
+  return true;
+}
+
 function loadExistingVoteForName() {
   const name = document.getElementById('nameInput').value.trim();
-  if (!name) return;
+  if (!name || !activeEventCode) return;
   const userId = userIdFromName(name);
   selectedRanges = [...(allUserRanges[userId]?.ranges || [])];
   pendingStart = null;
@@ -603,12 +637,13 @@ function loadExistingVoteForName() {
 
 async function submitVote() {
   const name = document.getElementById('nameInput').value.trim();
+  if (!activateEventCode(false)) { showToast('Bitte Gruppencode eingeben.'); return; }
   if (!name) { showToast('Bitte gib zuerst deinen Namen ein!'); return; }
   if (selectedRanges.length === 0) { showToast('Wähle mindestens einen Zeitraum aus!'); return; }
 
   try {
     const userId = userIdFromName(name);
-    await setDoc(doc(db, "wakeRanges", userId), {
+    await setDoc(doc(db, "events", activeEventCode, "ranges", userId), {
       name,
       ranges: selectedRanges,
       updatedAt: serverTimestamp()
@@ -616,7 +651,7 @@ async function submitVote() {
     showToast('✅ Gespeichert! Danke ' + name + '!');
   } catch (error) {
     console.error(error);
-    showToast('❌ Speichern fehlgeschlagen. Firestore-Regeln prüfen.');
+    showToast('❌ Speichern fehlgeschlagen. Code oder Firestore-Regeln prüfen.');
   }
 }
 
@@ -644,7 +679,9 @@ function rebuildAvailability() {
 }
 
 function listenForVotes() {
-  onSnapshot(rangesCollection, snapshot => {
+  const rangesCollection = collection(db, "events", activeEventCode, "ranges");
+
+  unsubscribeVotes = onSnapshot(rangesCollection, snapshot => {
     allUserRanges = {};
 
     snapshot.forEach(docSnap => {
@@ -659,13 +696,18 @@ function listenForVotes() {
     renderResults();
   }, error => {
     console.error(error);
-    showToast('❌ Konnte Stimmen nicht laden. Firestore-Regeln prüfen.');
+    showToast('❌ Zugriff verweigert. Gruppencode oder Firestore-Regeln prüfen.');
   });
 }
 
 function renderResults() {
   const grid = document.getElementById('resultsGrid');
   grid.innerHTML = '';
+
+  if (!activeEventCode) {
+    grid.innerHTML = '<p style="color:var(--ink-faint);font-size:14px">Gib zuerst den Gruppencode ein, um die Abstimmung zu laden.</p>';
+    return;
+  }
 
   const scored = [];
   let d = new Date(visibleStart);
@@ -718,13 +760,14 @@ function showToast(msg) {
 
 window.submitVote = submitVote;
 window.clearRanges = clearRanges;
+document.getElementById('codeInput').addEventListener('change', () => activateEventCode());
+document.getElementById('codeInput').addEventListener('blur', () => activateEventCode(false));
 document.getElementById('nameInput').addEventListener('change', loadExistingVoteForName);
 document.getElementById('nameInput').addEventListener('blur', loadExistingVoteForName);
 
 buildGrid();
 renderRangeList();
 renderResults();
-listenForVotes();
 </script>
 </body>
 </html>

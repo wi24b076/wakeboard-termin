@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wakeboard Session – Termin finden</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --water: #0d7a9e;
+    --water-light: #e0f4fb;
+    --water-mid: #5bb8d4;
+    --wave: #00b4d8;
+    --sand: #f8f5ef;
+    --ink: #0f1c28;
+    --ink-soft: #3d5166;
+    --ink-faint: #8ba3b5;
+    --yes: #1db86a;
+    --yes-bg: #e8faf1;
+    --maybe: #f4a500;
+    --maybe-bg: #fff8e1;
+    --no: #e03c3c;
+    --no-bg: #fdeaea;
+    --radius: 12px;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--sand);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* HERO */
+  .hero {
+    background: linear-gradient(135deg, #0d4a6b 0%, #0d7a9e 50%, #00b4d8 100%);
+    padding: 3rem 1.5rem 4rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 48px;
+    background: var(--sand);
+    clip-path: ellipse(60% 100% at 50% 100%);
+  }
+  .hero-eyebrow {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 0.75rem;
+  }
+  .hero h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+  }
+  .hero h1 span { color: #7ee8fa; }
+  .hero-sub {
+    color: rgba(255,255,255,0.75);
+    font-size: 1rem;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+
+  /* LAYOUT */
+  .container { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--water);
+    margin-bottom: 0.5rem;
+  }
+  h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 1.25rem;
+  }
+
+  /* NAME INPUT */
+  .name-section { margin-bottom: 2.5rem; }
+  .name-section input {
+    width: 100%;
+    max-width: 360px;
+    padding: 0.7rem 1rem;
+    border: 1.5px solid #c5d8e4;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-family: 'Inter', sans-serif;
+    background: #fff;
+    color: var(--ink);
+    transition: border-color 0.15s;
+    display: block;
+  }
+  .name-section input:focus { outline: none; border-color: var(--wave); }
+
+  /* DATE GRID */
+  .dates-section { margin-bottom: 2.5rem; }
+  .dates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+  }
+  .date-card {
+    background: #fff;
+    border: 1.5px solid #dde8ef;
+    border-radius: var(--radius);
+    padding: 0.9rem 0.75rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    user-select: none;
+  }
+  .date-card:hover { border-color: var(--wave); transform: translateY(-1px); }
+  .date-card .weekday {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 4px;
+  }
+  .date-card .day { font-family: 'Space Grotesk', sans-serif; font-size: 1.8rem; font-weight: 700; color: var(--ink); line-height: 1; }
+  .date-card .month { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .date-card .status-icon { font-size: 18px; margin-top: 8px; min-height: 22px; }
+
+  .date-card.yes { background: var(--yes-bg); border-color: var(--yes); }
+  .date-card.yes .day, .date-card.yes .weekday, .date-card.yes .month { color: #0d5c35; }
+  .date-card.maybe { background: var(--maybe-bg); border-color: var(--maybe); }
+  .date-card.maybe .day, .date-card.maybe .weekday, .date-card.maybe .month { color: #7a5200; }
+  .date-card.no { background: var(--no-bg); border-color: var(--no); }
+  .date-card.no .day, .date-card.no .weekday, .date-card.no .month { color: #7a1c1c; }
+
+  .vote-legend {
+    display: flex; gap: 1rem; flex-wrap: wrap;
+    margin-bottom: 1rem; font-size: 13px; color: var(--ink-soft);
+  }
+  .vote-legend span { display: flex; align-items: center; gap: 5px; }
+
+  /* SUBMIT */
+  .submit-btn {
+    background: var(--water);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 0.85rem 2rem;
+    font-size: 1rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    margin-bottom: 1rem;
+  }
+  .submit-btn:hover { background: #0a6685; }
+  .submit-btn:active { transform: scale(0.98); }
+
+  /* RESULTS */
+  .results-section { margin-top: 3rem; }
+  .results-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 1rem; }
+  .result-row {
+    background: #fff;
+    border-radius: var(--radius);
+    border: 1.5px solid #dde8ef;
+    padding: 1rem 1.25rem;
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  }
+  .result-date {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--ink);
+    min-width: 140px;
+  }
+  .result-bars { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 160px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); }
+  .bar-track {
+    flex: 1; height: 8px; background: #edf2f6; border-radius: 99px; overflow: hidden;
+  }
+  .bar-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+  .bar-yes .bar-fill { background: var(--yes); }
+  .bar-maybe .bar-fill { background: var(--maybe); }
+  .result-names { font-size: 12px; color: var(--ink-faint); }
+  .best-badge {
+    background: var(--water);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 99px;
+    letter-spacing: 0.05em;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--ink); color: #fff;
+    padding: 0.7rem 1.4rem; border-radius: 99px;
+    font-size: 14px; font-weight: 500;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 0; pointer-events: none; z-index: 99;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  .divider { height: 1px; background: #dde8ef; margin: 2.5rem 0; }
+  .hint { font-size: 13px; color: var(--ink-faint); margin-top: 0.5rem; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <p class="hero-eyebrow">Sommer 2026</p>
+  <h1>Wann geht's<br>aufs <span>Wasser? 🏄</span></h1>
+  <p class="hero-sub">Klick auf die Tage, die für dich passen – dann sehen wir alle auf einen Blick, wann der beste Termin ist.</p>
+</div>
+
+<div class="container">
+
+  <!-- NAME -->
+  <div class="name-section">
+    <div class="section-label">Dein Name</div>
+    <h2>Wer bist du?</h2>
+    <input type="text" id="nameInput" placeholder="z. B. Mia" maxlength="30" />
+    <p class="hint">Gib deinen Namen ein, bevor du abstimmst.</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- DATES -->
+  <div class="dates-section">
+    <div class="section-label">Verfügbarkeit</div>
+    <h2>Welche Tage passen dir?</h2>
+    <div class="vote-legend">
+      <span>✅ Bin dabei</span>
+      <span>🤔 Vielleicht</span>
+      <span>❌ Klappt nicht</span>
+      <span style="color:#c0cdd8">◻ Noch nicht gewählt</span>
+    </div>
+    <div class="dates-grid" id="datesGrid"></div>
+    <p class="hint" style="margin-top:0.75rem">Einmal klicken = ✅ Dabei &nbsp;·&nbsp; Zweimal = 🤔 Vielleicht &nbsp;·&nbsp; Dreimal = ❌ Nicht da &nbsp;·&nbsp; Viermal = zurücksetzen</p>
+  </div>
+
+  <button class="submit-btn" onclick="submitVote()">Abstimmung speichern 💾</button>
+
+  <div class="divider"></div>
+
+  <!-- RESULTS -->
+  <div class="results-section">
+    <div class="section-label">Übersicht</div>
+    <h2>Wer kann wann?</h2>
+    <div class="results-grid" id="resultsGrid"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  doc,
+  setDoc,
+  onSnapshot,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAyVBvXlNn7Tnos_E6M3dWWc4Ao_p9rRWQ",
+  authDomain: "wakeboarden-f426c.firebaseapp.com",
+  databaseURL: "https://wakeboarden-f426c-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "wakeboarden-f426c",
+  storageBucket: "wakeboarden-f426c.firebasestorage.app",
+  messagingSenderId: "123856531940",
+  appId: "1:123856531940:web:662edb9fb9f24c1f15d7f1",
+  measurementId: "G-1M4QS5KCY2"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const votesCollection = collection(db, "wakeVotes");
+
+const DATES = [
+  // Juni 2026
+  { date: '2026-06-13', label: 'Sa, 13. Jun' },
+  { date: '2026-06-14', label: 'So, 14. Jun' },
+  { date: '2026-06-20', label: 'Sa, 20. Jun' },
+  { date: '2026-06-21', label: 'So, 21. Jun' },
+  { date: '2026-06-27', label: 'Sa, 27. Jun' },
+  { date: '2026-06-28', label: 'So, 28. Jun' },
+  // Juli 2026
+  { date: '2026-07-04', label: 'Sa, 4. Jul' },
+  { date: '2026-07-05', label: 'So, 5. Jul' },
+  { date: '2026-07-11', label: 'Sa, 11. Jul' },
+  { date: '2026-07-12', label: 'So, 12. Jul' },
+  { date: '2026-07-18', label: 'Sa, 18. Jul' },
+  { date: '2026-07-19', label: 'So, 19. Jul' },
+  { date: '2026-07-25', label: 'Sa, 25. Jul' },
+  { date: '2026-07-26', label: 'So, 26. Jul' },
+];
+
+const WEEKDAYS = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+const MONTHS = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const CYCLE = [null, 'yes', 'maybe', 'no'];
+
+let selections = {}; // dateKey -> 'yes'|'maybe'|'no'|null
+let allUserVotes = {}; // userId -> { name, selections }
+let votes = {}; // dateKey -> { name: 'yes'|'maybe'|'no' }
+
+function parseDate(s) {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function userIdFromName(name) {
+  return encodeURIComponent(name.trim().toLowerCase());
+}
+
+function buildGrid() {
+  const grid = document.getElementById('datesGrid');
+  grid.innerHTML = '';
+  DATES.forEach(({ date }) => {
+    const d = parseDate(date);
+    const card = document.createElement('div');
+    card.className = 'date-card';
+    card.dataset.date = date;
+    card.innerHTML = `
+      <div class="weekday">${WEEKDAYS[d.getDay()]}</div>
+      <div class="day">${d.getDate()}</div>
+      <div class="month">${MONTHS[d.getMonth()]}</div>
+      <div class="status-icon"></div>
+    `;
+    card.onclick = () => cycleVote(date, card);
+    grid.appendChild(card);
+  });
+}
+
+function cycleVote(date, card) {
+  const cur = selections[date] || null;
+  const idx = CYCLE.indexOf(cur);
+  const next = CYCLE[(idx + 1) % CYCLE.length];
+  if (next) selections[date] = next;
+  else delete selections[date];
+  applyCardState(card, next);
+}
+
+function applyCardState(card, state) {
+  card.className = 'date-card' + (state ? ' ' + state : '');
+  const icon = card.querySelector('.status-icon');
+  const icons = { yes: '✅', maybe: '🤔', no: '❌', null: '' };
+  icon.textContent = icons[state] || '';
+}
+
+function applySelectionsToCards() {
+  document.querySelectorAll('.date-card').forEach(card => {
+    const date = card.dataset.date;
+    applyCardState(card, selections[date] || null);
+  });
+}
+
+function loadExistingVoteForName() {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) return;
+  const userId = userIdFromName(name);
+  selections = { ...(allUserVotes[userId]?.selections || {}) };
+  applySelectionsToCards();
+}
+
+async function submitVote() {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) { showToast('Bitte gib zuerst deinen Namen ein!'); return; }
+  if (Object.keys(selections).length === 0) { showToast('Wähle mindestens einen Tag aus!'); return; }
+
+  try {
+    const userId = userIdFromName(name);
+    await setDoc(doc(db, "wakeVotes", userId), {
+      name,
+      selections,
+      updatedAt: serverTimestamp()
+    });
+    showToast('✅ Gespeichert! Danke ' + name + '!');
+  } catch (error) {
+    console.error(error);
+    showToast('❌ Speichern fehlgeschlagen. Firestore-Regeln prüfen.');
+  }
+}
+
+function rebuildVotesFromUsers() {
+  votes = {};
+
+  Object.values(allUserVotes).forEach(userVote => {
+    const name = userVote.name;
+    const userSelections = userVote.selections || {};
+
+    Object.entries(userSelections).forEach(([date, val]) => {
+      if (!votes[date]) votes[date] = {};
+      votes[date][name] = val;
+    });
+  });
+}
+
+function listenForVotes() {
+  onSnapshot(votesCollection, snapshot => {
+    allUserVotes = {};
+
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      allUserVotes[docSnap.id] = {
+        name: data.name || docSnap.id,
+        selections: data.selections || {}
+      };
+    });
+
+    rebuildVotesFromUsers();
+    renderResults();
+  }, error => {
+    console.error(error);
+    showToast('❌ Konnte Stimmen nicht laden. Firestore-Regeln prüfen.');
+  });
+}
+
+function renderResults() {
+  const grid = document.getElementById('resultsGrid');
+  grid.innerHTML = '';
+
+  const scored = DATES.map(({ date, label }) => {
+    const dayVotes = votes[date] || {};
+    const yesNames = Object.entries(dayVotes).filter(([,v]) => v === 'yes').map(([n]) => n);
+    const maybeNames = Object.entries(dayVotes).filter(([,v]) => v === 'maybe').map(([n]) => n);
+    const noNames = Object.entries(dayVotes).filter(([,v]) => v === 'no').map(([n]) => n);
+    const total = Object.keys(dayVotes).length;
+    return { date, label, yesNames, maybeNames, noNames, total };
+  }).filter(d => d.total > 0);
+
+  if (scored.length === 0) {
+    grid.innerHTML = '<p style="color:var(--ink-faint);font-size:14px">Noch keine Stimmen – seid ihr die Ersten! 🏄‍♂️</p>';
+    return;
+  }
+
+  const maxScore = Math.max(...scored.map(d => d.yesNames.length * 2 + d.maybeNames.length));
+
+  scored
+    .sort((a, b) => (b.yesNames.length * 2 + b.maybeNames.length) - (a.yesNames.length * 2 + a.maybeNames.length))
+    .forEach(({ label, yesNames, maybeNames, noNames, total }) => {
+      const score = yesNames.length * 2 + maybeNames.length;
+      const isBest = score === maxScore && score > 0;
+      const yPct = total ? Math.round(yesNames.length / total * 100) : 0;
+      const mPct = total ? Math.round(maybeNames.length / total * 100) : 0;
+
+      const row = document.createElement('div');
+      row.className = 'result-row';
+      row.innerHTML = `
+        <div class="result-date">${label}${isBest ? '<br><span class="best-badge">Top-Termin 🌊</span>' : ''}</div>
+        <div class="result-bars">
+          <div class="bar-row bar-yes">
+            <span style="min-width:18px">✅ ${yesNames.length}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${yPct}%"></div></div>
+          </div>
+          <div class="bar-row bar-maybe">
+            <span style="min-width:18px">🤔 ${maybeNames.length}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${mPct}%"></div></div>
+          </div>
+        </div>
+        <div class="result-names">
+          ${yesNames.length ? '<b style="color:var(--yes)">Dabei:</b> ' + yesNames.join(', ') + '<br>' : ''}
+          ${maybeNames.length ? '<b style="color:var(--maybe)">Vielleicht:</b> ' + maybeNames.join(', ') + '<br>' : ''}
+          ${noNames.length ? '<b style="color:var(--no)">Nicht da:</b> ' + noNames.join(', ') : ''}
+        </div>
+      `;
+      grid.appendChild(row);
+    });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+window.submitVote = submitVote;
+document.getElementById('nameInput').addEventListener('change', loadExistingVoteForName);
+document.getElementById('nameInput').addEventListener('blur', loadExistingVoteForName);
+
+buildGrid();
+renderResults();
+listenForVotes();
+</script>
+</body>
+</html>
